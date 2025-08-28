@@ -14,6 +14,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { MathTools } from './tools/math-tools.js';
 
+
 class MathToolsServer {
   private server: Server;
 
@@ -308,9 +309,12 @@ class MathToolsServer {
   async run(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Math Tools MCP server running on stdio');
+    console.error('String Tools MCP server running on stdio');
   }
 }
 
 const server = new MathToolsServer();
-server.run().catch(console.error);
+server.run().catch((err) => {
+  console.error('[MCP Fatal]', err);
+  process.exit(1);
+});

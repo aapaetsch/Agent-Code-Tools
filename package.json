@@ -19,14 +19,26 @@
     "clean:string-tools": "cd servers/string-tools && npm run clean",
     "clean:date-tools": "cd servers/date-tools && npm run clean"
   },
-  "keywords": ["mcp", "server", "tools", "utilities", "Code-tools", "AI", "agents"],
+  "keywords": [
+    "mcp",
+    "server",
+    "tools",
+    "utilities",
+    "Code-tools",
+    "AI",
+    "agents"
+  ],
   "author": "Aidan Paetsch",
   "license": "MIT",
   "workspaces": [
     "servers/*"
   ],
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   }
 }

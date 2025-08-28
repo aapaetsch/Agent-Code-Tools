@@ -525,9 +525,12 @@ class RegexToolsServer {
   async run(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Regex Tools MCP server running on stdio');
+    console.error('String Tools MCP server running on stdio');
   }
 }
 
 const server = new RegexToolsServer();
-server.run().catch(console.error);
+server.run().catch((err) => {
+  console.error('[MCP Fatal]', err);
+  process.exit(1);
+});

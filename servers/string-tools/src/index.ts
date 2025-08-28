@@ -7,6 +7,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
@@ -306,4 +307,7 @@ class StringToolsServer {
 }
 
 const server = new StringToolsServer();
-server.run().catch(console.error);
+server.run().catch((err) => {
+  console.error('[MCP Fatal]', err);
+  process.exit(1);
+});
