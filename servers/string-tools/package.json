@@ -1,0 +1,35 @@
+{
+  "name": "string-tools-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server providing string manipulation and comparison utilities",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "start": "node build/index.js",
+    "clean": "npx rimraf build || rmdir /s /q build 2>nul || echo \"Cleaned\""
+  },
+  "bin": {
+    "string-tools-mcp-server": "build/index.js"
+  },
+  "files": [
+    "build/**/*"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.2"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "string",
+    "text",
+    "utilities"
+  ],
+  "author": "Aidan Paetsch",
+  "license": "MIT"
+}

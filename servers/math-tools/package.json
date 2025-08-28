@@ -1,0 +1,32 @@
+{
+  "name": "math-tools-mcp-server",
+  "version": "1.0.0",
+  "description": "A MCP (Model Context Protocol) server that provides various mathematical functionalities to AI agents.",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "start": "node build/index.js",
+    "clean": "npx rimraf build || rmdir /s /q build 2>nul || echo \"Cleaned\""
+  },
+  "bin": {
+    "math-tools-mcp-server": "build/index.js"
+  },
+  "files": [
+    "build/**/*"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.2"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "math",
+    "calculator",
+    "numbers"
+  ],
+  "author": "Aidan Paetsch",
+  "license": "MIT"
+}

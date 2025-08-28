@@ -1,0 +1,35 @@
+{
+  "name": "mcp-server-date-tools",
+  "version": "1.0.0",
+  "description": "MCP Server providing date parsing, formatting, and manipulation utilities",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "start": "node build/index.js",
+    "clean": "npx rimraf build || rmdir /s /q build 2>nul || echo \"Cleaned\""
+  },
+  "bin": {
+    "mcp-server-date-tools": "build/index.js"
+  },
+  "files": [
+    "build/**/*"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.2"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "date",
+    "time",
+    "utilities"
+  ],
+  "author": "Aidan Paetsch",
+  "license": "MIT"
+}
