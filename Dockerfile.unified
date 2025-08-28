@@ -1,0 +1,84 @@
+# Ultra-minimal unified MCP servers container
+FROM node:18-alpine
+
+# Install PM2 for process management and dumb-init
+RUN npm install -g pm2 && \
+    apk add --no-cache dumb-init
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy only the essential built files
+COPY --chown=nodejs:nodejs servers/*/build servers/
+COPY --chown=nodejs:nodejs servers/*/package.json servers/*/
+
+# Install production dependencies once (shared)
+COPY --chown=nodejs:nodejs package.json .
+RUN npm ci --only=production --no-cache && \
+    npm cache clean --force
+
+# Create PM2 ecosystem file
+COPY --chown=nodejs:nodejs <<EOF ecosystem.config.js
+module.exports = {
+  apps: [
+    {
+      name: 'regex-tools',
+      script: 'servers/regex-tools/build/index.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        SERVER_PORT: 3001
+      }
+    },
+    {
+      name: 'math-tools', 
+      script: 'servers/math-tools/build/index.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        SERVER_PORT: 3002
+      }
+    },
+    {
+      name: 'string-tools',
+      script: 'servers/string-tools/build/index.js', 
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        SERVER_PORT: 3003
+      }
+    },
+    {
+      name: 'date-tools',
+      script: 'servers/date-tools/build/index.js',
+      instances: 1, 
+      autorestart: true,
+      watch: false,
+      env: {
+        NODE_ENV: 'production',
+        SERVER_PORT: 3004
+      }
+    }
+  ]
+};
+EOF
+
+USER nodejs
+
+EXPOSE 3001 3002 3003 3004
+
+# Health check for all services
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD pm2 jlist | grep -q '"status":"online"' || exit 1
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["pm2-runtime", "start", "ecosystem.config.js"]

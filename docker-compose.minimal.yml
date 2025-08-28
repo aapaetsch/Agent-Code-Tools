@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mcp-servers:
+    build:
+      context: .
+      dockerfile: Dockerfile.unified
+    container_name: mcp-all-servers
+    restart: unless-stopped
+    ports:
+      - "3001:3001"  # regex-tools
+      - "3002:3002"  # math-tools  
+      - "3003:3003"  # string-tools
+      - "3004:3004"  # date-tools
+    environment:
+      - NODE_ENV=production
+    # No volumes needed - everything is stateless
+    networks:
+      - mcp-network
+    labels:
+      - "com.docker.compose.project=mcp-servers"
+    # Resource limits to keep it lean
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+networks:
+  mcp-network:
+    driver: bridge
