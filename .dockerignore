@@ -10,6 +10,5 @@ coverage
 .vscode
 *.log
 src/**/*.ts
-tsconfig.json
 .dockerignore
 Dockerfile
