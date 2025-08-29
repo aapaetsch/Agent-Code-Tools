@@ -9,7 +9,7 @@ yarn-error.log*
 build/
 dist/
 *.tsbuildinfo
-servers/**/build/
+/servers/**/build/
 
 # Environment files
 .env
