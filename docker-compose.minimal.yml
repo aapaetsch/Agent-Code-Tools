@@ -8,23 +8,26 @@ services:
     container_name: mcp-all-servers
     restart: unless-stopped
     ports:
-      - "3001:3001"  # regex-tools
-      - "3002:3002"  # math-tools  
-      - "3003:3003"  # string-tools
-      - "3004:3004"  # date-tools
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
+      - "3004:3004"
     environment:
       - NODE_ENV=production
-    # No volumes needed - everything is stateless
-    networks:
-      - mcp-network
-    labels:
-      - "com.docker.compose.project=mcp-servers"
-    # Resource limits to keep it lean
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '1.0'
+      - HTTP_PATH=/mcp
+    networks: [mcp-network]
+
+  mcp-gateway:
+    image: nginx:alpine
+    container_name: mcp-gateway
+    restart: unless-stopped
+    depends_on: [mcp-servers]
+    ports:
+      - "443:8443"      # expose a single TLS-like port externally
+      - "80:8080"       # optional HTTP
+    volumes:
+      - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks: [mcp-network]
 
 networks:
   mcp-network:

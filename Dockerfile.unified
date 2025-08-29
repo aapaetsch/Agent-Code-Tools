@@ -1,84 +1,85 @@
-# Ultra-minimal unified MCP servers container
-FROM node:18-alpine
-
-# Install PM2 for process management and dumb-init
-RUN npm install -g pm2 && \
-    apk add --no-cache dumb-init
-
-# Create app user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
+# syntax=docker/dockerfile:1.6
+########## BUILD STAGE ##########
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy only the essential built files
-COPY --chown=nodejs:nodejs servers/*/build servers/
-COPY --chown=nodejs:nodejs servers/*/package.json servers/*/
+RUN apk add --no-cache dumb-init
 
-# Install production dependencies once (shared)
-COPY --chown=nodejs:nodejs package.json .
-RUN npm ci --only=production --no-cache && \
-    npm cache clean --force
+# Copy only package manifests first for better cache hits
+COPY servers/regex-tools/package*.json servers/regex-tools/
+COPY servers/math-tools/package*.json  servers/math-tools/
+COPY servers/string-tools/package*.json servers/string-tools/
+COPY servers/date-tools/package*.json  servers/date-tools/
 
-# Create PM2 ecosystem file
-COPY --chown=nodejs:nodejs <<EOF ecosystem.config.js
+# Install dependencies PER SERVER (dev deps included to compile TS)
+RUN npm install --no-audit --no-fund --prefix servers/regex-tools \
+ && npm install --no-audit --no-fund --prefix servers/math-tools \
+ && npm install --no-audit --no-fund --prefix servers/string-tools \
+ && npm install --no-audit --no-fund --prefix servers/date-tools
+
+# copy the base config once
+COPY tsconfig.json ./
+
+# copy per-package tsconfigs
+COPY servers/*/tsconfig*.json servers/*/
+
+# copy sources and build as before
+COPY servers/ servers/
+RUN cd servers/regex-tools  && npm run build \
+ && cd ../math-tools       && npm run build \
+ && cd ../string-tools     && npm run build \
+ && cd ../date-tools       && npm run build
+
+########## RUNTIME STAGE ##########
+FROM node:22-alpine AS runtime
+WORKDIR /app
+
+# Lean runtime; pm2 for multi-process
+RUN apk add --no-cache dumb-init \
+ && npm i -g pm2@latest
+
+# Non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
+
+# Copy built apps
+COPY --from=builder /app/servers/regex-tools/build  servers/regex-tools/build
+COPY --from=builder /app/servers/math-tools/build   servers/math-tools/build
+COPY --from=builder /app/servers/string-tools/build servers/string-tools/build
+COPY --from=builder /app/servers/date-tools/build   servers/date-tools/build
+
+# Copy ONLY runtime deps (per server node_modules)
+COPY --from=builder /app/servers/regex-tools/node_modules  servers/regex-tools/node_modules
+COPY --from=builder /app/servers/math-tools/node_modules   servers/math-tools/node_modules
+COPY --from=builder /app/servers/string-tools/node_modules servers/string-tools/node_modules
+COPY --from=builder /app/servers/date-tools/node_modules   servers/date-tools/node_modules
+
+# Copy the per-server package.json files (optional but nice to have)
+COPY servers/regex-tools/package*.json servers/regex-tools/
+COPY servers/math-tools/package*.json  servers/math-tools/
+COPY servers/string-tools/package*.json servers/string-tools/
+COPY servers/date-tools/package*.json  servers/date-tools/
+
+# PM2 ecosystem config (unchanged)
+COPY --chown=nodejs:nodejs <<'EOF' ecosystem.config.js
 module.exports = {
   apps: [
-    {
-      name: 'regex-tools',
-      script: 'servers/regex-tools/build/index.js',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      env: {
-        NODE_ENV: 'production',
-        SERVER_PORT: 3001
-      }
-    },
-    {
-      name: 'math-tools', 
-      script: 'servers/math-tools/build/index.js',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      env: {
-        NODE_ENV: 'production',
-        SERVER_PORT: 3002
-      }
-    },
-    {
-      name: 'string-tools',
-      script: 'servers/string-tools/build/index.js', 
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      env: {
-        NODE_ENV: 'production',
-        SERVER_PORT: 3003
-      }
-    },
-    {
-      name: 'date-tools',
-      script: 'servers/date-tools/build/index.js',
-      instances: 1, 
-      autorestart: true,
-      watch: false,
-      env: {
-        NODE_ENV: 'production',
-        SERVER_PORT: 3004
-      }
-    }
+    { name: 'regex-tools',  script: 'servers/regex-tools/build/index.js',
+      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3001, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
+    { name: 'math-tools',   script: 'servers/math-tools/build/index.js',
+      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3002, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
+    { name: 'string-tools', script: 'servers/string-tools/build/index.js',
+      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3003, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
+    { name: 'date-tools',   script: 'servers/date-tools/build/index.js',
+      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3004, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } }
   ]
 };
 EOF
 
-USER nodejs
-
 EXPOSE 3001 3002 3003 3004
-
-# Health check for all services
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD pm2 jlist | grep -q '"status":"online"' || exit 1
 
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+ENTRYPOINT ["dumb-init","--"]
+CMD ["pm2-runtime","start","ecosystem.config.js"]
+
