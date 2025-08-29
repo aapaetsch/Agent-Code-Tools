@@ -1,32 +1,51 @@
 #!/usr/bin/env node
-
 /**
- * MCP Server for Date Tools
- * Provides date parsing, formatting, and manipulation utilities through the Model Context Protocol
+ * MCP Server for Date Tools — stdio + HTTP (Streamable)
+ *
+ * Modes (via env):
+ *   TRANSPORT=stdio          -> stdio only
+ *   TRANSPORT=http           -> HTTP only
+ *   TRANSPORT=both (default) -> both in one process
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import express, { type Request, type Response } from "express";
+import cors from "cors";
+import { randomUUID } from "node:crypto";
+
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
   Tool,
-} from '@modelcontextprotocol/sdk/types.js';
-import { DateTools } from './tools/date-tools.js';
+} from "@modelcontextprotocol/sdk/types.js";
+import { DateTools } from "./tools/date-tools.js";
+
+// ---------- Config ----------
+const TRANSPORT = (process.env.TRANSPORT || "both").toLowerCase(); // stdio | http | both
+const HTTP_PORT = Number(process.env.PORT || process.env.HTTP_PORT || 3004);
+const HTTP_PATH = process.env.HTTP_PATH || "/mcp";
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || "127.0.0.1,localhost")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 class DateToolsServer {
   private server: Server;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: 'date-tools-server',
-        version: '1.0.0',
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
+    this.server = new Server({
+      name: "date-tools-server",
+        version: "1.0.0",
+    }, {
+      capabilities: { tools: {} }
+    });
 
     this.setupToolHandlers();
     this.setupErrorHandling();
@@ -34,346 +53,220 @@ class DateToolsServer {
 
   private setupErrorHandling(): void {
     this.server.onerror = (error) => {
-      console.error('[MCP Error]', error);
+      console.error("[MCP Error]", error);
     };
 
-    process.on('SIGINT', async () => {
+    process.on("SIGINT", async () => {
       await this.server.close();
       process.exit(0);
     });
   }
 
   private setupToolHandlers(): void {
+    // --- tools list (unchanged from your file) ---
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [
           {
-            name: 'parse',
-            description: 'Parse date from various string formats with flexible parsing options',
+            name: "parse",
+            description: "Parse date from various string formats with flexible parsing options",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                dateString: {
-                  type: 'string',
-                  description: 'Date string to parse'
-                },
+                dateString: { type: "string", description: "Date string to parse" },
                 options: {
-                  type: 'object',
+                  type: "object",
                   properties: {
-                    format: { type: 'string', description: 'Expected input format (e.g., "YYYY-MM-DD")' },
-                    timezone: { type: 'string', description: 'Timezone to assume for parsing', default: 'UTC' },
-                    locale: { type: 'string', description: 'Locale for parsing', default: 'en-US' },
-                    strict: { type: 'boolean', description: 'Use strict parsing mode', default: false }
+                    format: { type: "string", description: 'Expected input format (e.g., "YYYY-MM-DD")' },
+                    timezone: { type: "string", description: "Timezone to assume for parsing", default: "UTC" },
+                    locale: { type: "string", description: "Locale for parsing", default: "en-US" },
+                    strict: { type: "boolean", description: "Use strict parsing mode", default: false },
                   },
-                  description: 'Parsing options'
-                }
+                  description: "Parsing options",
+                },
               },
-              required: ['dateString']
-            }
+              required: ["dateString"],
+            },
           },
           {
-            name: 'format',
-            description: 'Format date to specified format string with customizable output patterns',
+            name: "format",
+            description: "Format date to specified format string with customizable output patterns",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                date: {
-                  type: ['string', 'number'],
-                  description: 'Date to format (ISO string, timestamp, or Date object)'
-                },
-                format: {
-                  type: 'string',
-                  description: 'Output format pattern (e.g., "YYYY-MM-DD HH:mm:ss", "MM/DD/YYYY")'
-                },
+                date: { type: ["string", "number"], description: "Date to format (ISO string, timestamp, or Date object)" },
+                format: { type: "string", description: 'Output format (e.g., "YYYY-MM-DD HH:mm:ss", "MM/DD/YYYY")' },
                 options: {
-                  type: 'object',
+                  type: "object",
                   properties: {
-                    timezone: { type: 'string', description: 'Target timezone for formatting', default: 'UTC' },
-                    locale: { type: 'string', description: 'Locale for formatting', default: 'en-US' }
+                    timezone: { type: "string", description: "Target timezone for formatting", default: "UTC" },
+                    locale: { type: "string", description: "Locale for formatting", default: "en-US" },
                   },
-                  description: 'Formatting options'
-                }
+                  description: "Formatting options",
+                },
               },
-              required: ['date', 'format']
-            }
+              required: ["date", "format"],
+            },
           },
           {
-            name: 'convert',
-            description: 'Convert date from one format to another with format transformation',
+            name: "convert",
+            description: "Convert date from one format to another with format transformation",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                dateString: {
-                  type: 'string',
-                  description: 'Date string to convert'
-                },
-                fromFormat: {
-                  type: 'string',
-                  description: 'Source format pattern'
-                },
-                toFormat: {
-                  type: 'string',
-                  description: 'Target format pattern'
-                },
+                dateString: { type: "string", description: "Date string to convert" },
+                fromFormat: { type: "string", description: "Source format pattern" },
+                toFormat: { type: "string", description: "Target format pattern" },
                 options: {
-                  type: 'object',
+                  type: "object",
                   properties: {
-                    timezone: { type: 'string', description: 'Timezone for conversion', default: 'UTC' },
-                    locale: { type: 'string', description: 'Locale for conversion', default: 'en-US' }
+                    timezone: { type: "string", description: "Timezone for conversion", default: "UTC" },
+                    locale: { type: "string", description: "Locale for conversion", default: "en-US" },
                   },
-                  description: 'Conversion options'
-                }
+                  description: "Conversion options",
+                },
               },
-              required: ['dateString', 'fromFormat', 'toFormat']
-            }
+              required: ["dateString", "fromFormat", "toFormat"],
+            },
           },
           {
-            name: 'arithmetic',
-            description: 'Perform date arithmetic operations like adding or subtracting time periods',
+            name: "arithmetic",
+            description: "Perform date arithmetic operations like adding or subtracting time periods",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                date: {
-                  type: ['string', 'number'],
-                  description: 'Starting date'
-                },
+                date: { type: ["string", "number"], description: "Starting date" },
                 operations: {
-                  type: 'array',
+                  type: "array",
                   items: {
-                    type: 'object',
+                    type: "object",
                     properties: {
                       unit: {
-                        type: 'string',
-                        enum: ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'],
-                        description: 'Time unit for the operation'
+                        type: "string",
+                        enum: ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds"],
+                        description: "Time unit for the operation",
                       },
-                      value: {
-                        type: 'number',
-                        description: 'Amount to add or subtract'
-                      },
-                      operation: {
-                        type: 'string',
-                        enum: ['add', 'subtract'],
-                        description: 'Whether to add or subtract the value'
-                      }
+                      value: { type: "number", description: "Amount to add or subtract" },
+                      operation: { type: "string", enum: ["add", "subtract"], description: "Add or subtract" },
                     },
-                    required: ['unit', 'value', 'operation']
+                    required: ["unit", "value", "operation"],
                   },
-                  description: 'Array of arithmetic operations to perform in sequence'
-                }
+                  description: "Operations to perform",
+                },
               },
-              required: ['date', 'operations']
-            }
+              required: ["date", "operations"],
+            },
           },
           {
-            name: 'compare',
-            description: 'Compare two dates and calculate differences with various precision levels',
+            name: "compare",
+            description: "Compare two dates and calculate differences with various precision levels",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                date1: {
-                  type: ['string', 'number'],
-                  description: 'First date to compare'
-                },
-                date2: {
-                  type: ['string', 'number'],
-                  description: 'Second date to compare'
-                },
+                date1: { type: ["string", "number"], description: "First date" },
+                date2: { type: ["string", "number"], description: "Second date" },
                 options: {
-                  type: 'object',
+                  type: "object",
                   properties: {
                     precision: {
-                      type: 'string',
-                      enum: ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'],
-                      description: 'Precision level for the primary difference calculation',
-                      default: 'milliseconds'
+                      type: "string",
+                      enum: ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds"],
+                      default: "milliseconds",
                     },
-                    absolute: {
-                      type: 'boolean',
-                      description: 'Return absolute difference (always positive)',
-                      default: false
-                    }
+                    absolute: { type: "boolean", default: false },
                   },
-                  description: 'Comparison options'
-                }
+                  description: "Comparison options",
+                },
               },
-              required: ['date1', 'date2']
-            }
+              required: ["date1", "date2"],
+            },
           },
           {
-            name: 'info',
-            description: 'Get comprehensive information about a specific date including calendar details and relative information',
+            name: "info",
+            description: "Get comprehensive information about a specific date including calendar details and relative information",
             inputSchema: {
-              type: 'object',
-              properties: {
-                date: {
-                  type: ['string', 'number'],
-                  description: 'Date to analyze'
-                }
-              },
-              required: ['date']
-            }
+              type: "object",
+              properties: { date: { type: ["string", "number"], description: "Date to analyze" } },
+              required: ["date"],
+            },
           },
           {
-            name: 'validate',
-            description: 'Validate date strings against formats and business rules with comprehensive validation options',
+            name: "validate",
+            description: "Validate date strings against formats and business rules with comprehensive validation options",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
-                dateString: {
-                  type: 'string',
-                  description: 'Date string to validate'
-                },
-                format: {
-                  type: 'string',
-                  description: 'Expected format pattern (optional for auto-detection)'
-                },
+                dateString: { type: "string", description: "Date string to validate" },
+                format: { type: "string", description: "Expected format pattern (optional for auto-detection)" },
                 options: {
-                  type: 'object',
+                  type: "object",
                   properties: {
-                    strict: { type: 'boolean', description: 'Use strict format matching', default: false },
-                    allowFuture: { type: 'boolean', description: 'Allow future dates', default: true },
-                    allowPast: { type: 'boolean', description: 'Allow past dates', default: true },
-                    minDate: { type: 'string', description: 'Minimum allowed date' },
-                    maxDate: { type: 'string', description: 'Maximum allowed date' }
+                    strict: { type: "boolean", default: false },
+                    allowFuture: { type: "boolean", default: true },
+                    allowPast: { type: "boolean", default: true },
+                    minDate: { type: "string" },
+                    maxDate: { type: "string" },
                   },
-                  description: 'Validation options'
-                }
+                  description: "Validation options",
+                },
               },
-              required: ['dateString']
-            }
-          }
-        ] as Tool[]
+              required: ["dateString"],
+            },
+          },
+        ] as Tool[],
       };
     });
 
+    // --- tool calls (unchanged from your file) ---
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
       if (!args) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                success: false,
-                error: 'No arguments provided'
-              }, null, 2)
-            }
-          ],
-          isError: true
+          content: [{ type: "text", text: JSON.stringify({ success: false, error: "No arguments provided" }, null, 2) }],
+          isError: true,
         };
       }
 
       try {
         switch (name) {
-          case 'parse': {
-            const result = DateTools.parse(
-              args.dateString as string, 
-              args.options as any
-            );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+          case "parse": {
+            const result = DateTools.parse(args.dateString as string, args.options as any);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'format': {
-            const result = DateTools.format(
-              args.date as string | number, 
-              args.format as string, 
-              args.options as any
-            );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+          case "format": {
+            const result = DateTools.format(args.date as string | number, args.format as string, args.options as any);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'convert': {
+          case "convert": {
             const result = DateTools.convert(
-              args.dateString as string, 
-              args.fromFormat as string, 
-              args.toFormat as string, 
-              args.options as any
+              args.dateString as string,
+              args.fromFormat as string,
+              args.toFormat as string,
+              args.options as any,
             );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'arithmetic': {
-            const result = DateTools.arithmetic(
-              args.date as string | number, 
-              (args.operations as any[]) || []
-            );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+          case "arithmetic": {
+            const result = DateTools.arithmetic(args.date as string | number, (args.operations as any[]) || []);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'compare': {
+          case "compare": {
             const result = DateTools.compare(
-              args.date1 as string | number, 
-              args.date2 as string | number, 
-              args.options as any
+              args.date1 as string | number,
+              args.date2 as string | number,
+              args.options as any,
             );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'info': {
+          case "info": {
             const result = DateTools.info(args.date as string | number);
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
-          case 'validate': {
-            const result = DateTools.validate(
-              args.dateString as string, 
-              args.format as string, 
-              args.options as any
-            );
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(result, null, 2)
-                }
-              ]
-            };
+          case "validate": {
+            const result = DateTools.validate(args.dateString as string, args.format as string, args.options as any);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -381,28 +274,80 @@ class DateToolsServer {
         return {
           content: [
             {
-              type: 'text',
-              text: JSON.stringify({
-                success: false,
-                error: `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
-              }, null, 2)
-            }
+              type: "text",
+              text: JSON.stringify(
+                { success: false, error: `Tool execution failed: ${error instanceof Error ? error.message : String(error)}` },
+                null,
+                2,
+              ),
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
     });
   }
 
-  async run(): Promise<void> {
+  // ----- stdio -----
+  async runOnStdio(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('String Tools MCP server running on stdio');
+    console.error("Date Tools MCP server running on stdio");
+  }
+
+  // ----- HTTP (Streamable) -----
+  async runOnHttp(): Promise<void> {
+    const app = express();
+    app.use(express.json({ limit: "2mb" }));
+
+    app.use(
+      cors({
+        origin: ALLOWED_ORIGINS.includes("*") ? true : ALLOWED_ORIGINS,
+        credentials: true,
+        exposedHeaders: ["Mcp-Session-Id"],
+      }),
+    );
+
+    app.get("/health", (_req: Request, res: Response): void => {
+      res.status(200).send("ok\n");
+    });
+
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      enableDnsRebindingProtection: true,
+      allowedHosts: ALLOWED_HOSTS,
+      allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
+    });
+
+    app.all(HTTP_PATH, async (req: Request, res: Response): Promise<void> => {
+      await transport.handleRequest(req, res);
+    });
+
+    await this.server.connect(transport);
+
+    app.listen(HTTP_PORT, () => {
+      console.error(
+        `Date Tools MCP server (HTTP) listening on :${HTTP_PORT}${HTTP_PATH} | allowedHosts=${ALLOWED_HOSTS.join(
+          ",",
+        )} | allowedOrigins=${ALLOWED_ORIGINS.join(",")}`,
+      );
+    });
+  }
+
+  async run(): Promise<void> {
+    if (TRANSPORT === "stdio") {
+      await this.runOnStdio();
+    } else if (TRANSPORT === "http") {
+      await this.runOnHttp();
+    } else {
+      await this.runOnStdio();
+      await this.runOnHttp();
+    }
   }
 }
 
 const server = new DateToolsServer();
 server.run().catch((err) => {
-  console.error('[MCP Fatal]', err);
+  console.error("[MCP Fatal]", err);
   process.exit(1);
 });
