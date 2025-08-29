@@ -6,8 +6,15 @@
   "type": "module",
   "scripts": {
     "build": "npx tsc",
-    "dev": "npx tsc --watch",
+    "dev": "cross-env TRANSPORT=both PORT=${PORT:-3001} tsx src/index.ts",
+    "dev:stdio": "cross-env TRANSPORT=stdio tsx src/index.ts",
+    "dev:http": "cross-env TRANSPORT=http PORT=${PORT:-3001} tsx src/index.ts",
+
     "start": "node build/index.js",
+    "start:stdio": "cross-env TRANSPORT=stdio node build/index.js",
+    "start:http": "cross-env TRANSPORT=http PORT=${PORT:-3001} node build/index.js",
+    "start:both": "cross-env TRANSPORT=both PORT=${PORT:-3001} node build/index.js",
+
     "clean": "npx rimraf build || rmdir /s /q build 2>nul || echo \"Cleaned\""
   },
   "bin": {
@@ -17,11 +24,15 @@
     "build/**/*"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0"
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "express": "^5.0.0",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.9.2"
+    "@types/express": "^5.0.0",
+    "typescript": "^5.0.0",
+    "@types/cors": "^2.8.17"
   },
   "keywords": [
     "mcp",

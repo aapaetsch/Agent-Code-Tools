@@ -3,16 +3,34 @@
   "version": "1.0.0",
   "description": "A collection of MCP (Model Context Protocol) servers that provide various code-related functionalities to AI agents.",
   "main": "index.js",
-  "scripts": {
+   "scripts": {
     "build": "npm run build:regex-tools && npm run build:math-tools && npm run build:string-tools && npm run build:date-tools",
+
     "build:regex-tools": "cd servers/regex-tools && npm run build",
     "build:math-tools": "cd servers/math-tools && npm run build",
     "build:string-tools": "cd servers/string-tools && npm run build",
     "build:date-tools": "cd servers/date-tools && npm run build",
+
     "dev:regex-tools": "cd servers/regex-tools && npm run dev",
     "dev:math-tools": "cd servers/math-tools && npm run dev",
     "dev:string-tools": "cd servers/string-tools && npm run dev",
     "dev:date-tools": "cd servers/date-tools && npm run dev",
+
+    "start:regex-tools": "cd servers/regex-tools && npm run start",
+    "start:math-tools": "cd servers/math-tools && npm run start",
+    "start:string-tools": "cd servers/string-tools && npm run start",
+    "start:date-tools": "cd servers/date-tools && npm run start",
+
+    "http:regex-tools": "cd servers/regex-tools && TRANSPORT=http PORT=3001 npm run start",
+    "http:math-tools": "cd servers/math-tools && TRANSPORT=http PORT=3002 npm run start",
+    "http:string-tools": "cd servers/string-tools && TRANSPORT=http PORT=3003 npm run start",
+    "http:date-tools": "cd servers/date-tools && TRANSPORT=http PORT=3004 npm run start",
+
+    "both:regex-tools": "cd servers/regex-tools && TRANSPORT=both PORT=3001 npm run start",
+    "both:math-tools": "cd servers/math-tools && TRANSPORT=both PORT=3002 npm run start",
+    "both:string-tools": "cd servers/string-tools && TRANSPORT=both PORT=3003 npm run start",
+    "both:date-tools": "cd servers/date-tools && TRANSPORT=both PORT=3004 npm run start",
+
     "clean": "npm run clean:regex-tools && npm run clean:math-tools && npm run clean:string-tools && npm run clean:date-tools",
     "clean:regex-tools": "cd servers/regex-tools && npm run clean",
     "clean:math-tools": "cd servers/math-tools && npm run clean",
@@ -30,15 +48,22 @@
   ],
   "author": "Aidan Paetsch",
   "license": "MIT",
-  "workspaces": [
-    "servers/*"
-  ],
   "private": true,
+  "workspaces": [
+    "servers/regex-tools",
+    "servers/math-tools",
+    "servers/string-tools",
+    "servers/date-tools"
+  ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0"
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "express": "^5.0.0",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@types/express": "^5.0.0",
+    "typescript": "^5.0.0",
+    "@types/cors": "^2.8.17"
   }
 }
