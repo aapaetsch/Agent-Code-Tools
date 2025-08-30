@@ -7,11 +7,6 @@ services:
       dockerfile: Dockerfile.unified
     container_name: mcp-all-servers
     restart: unless-stopped
-    ports:
-      - "3001:3001"
-      - "3002:3002"
-      - "3003:3003"
-      - "3004:3004"
     environment:
       - NODE_ENV=production
       - HTTP_PATH=/mcp
@@ -23,8 +18,8 @@ services:
     restart: unless-stopped
     depends_on: [mcp-servers]
     ports:
-      - "443:8443"      # expose a single TLS-like port externally
-      - "80:8080"       # optional HTTP
+      # - "4443:8443"      # expose a single TLS-like port externally
+      - "8888:8080"       # optional HTTP
     volumes:
       - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks: [mcp-network]

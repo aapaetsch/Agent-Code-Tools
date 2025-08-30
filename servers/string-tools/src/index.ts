@@ -24,7 +24,7 @@ import {
 import { StringTools } from "./tools/string-tools.js";
 
 // ---------- Config ----------
-const TRANSPORT = (process.env.TRANSPORT || "both").toLowerCase(); // stdio | http | both
+const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
 const HTTP_PORT = Number(process.env.PORT || process.env.HTTP_PORT || 3003);
 const HTTP_PATH = process.env.HTTP_PATH || "/mcp";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
@@ -67,7 +67,7 @@ class StringToolsServer {
       return {
         tools: [
           {
-            name: "compare",
+            name: "string_compare",
             description:
               "Compare two strings using various comparison methods including exact match, similarity, and containment",
             inputSchema: {
@@ -95,7 +95,7 @@ class StringToolsServer {
             },
           },
           {
-            name: "transform",
+            name: "string_transform",
             description:
               "Apply various transformations to text including case changes, formatting, and string operations",
             inputSchema: {
@@ -136,7 +136,7 @@ class StringToolsServer {
             },
           },
           {
-            name: "analyze",
+            name: "string_analyze",
             description:
               "Analyze string properties including character counts, word frequency, and text patterns",
             inputSchema: {
@@ -148,7 +148,7 @@ class StringToolsServer {
             },
           },
           {
-            name: "diff",
+            name: "string_diff",
             description:
               "Find and highlight differences between two strings with various comparison options",
             inputSchema: {
@@ -182,7 +182,7 @@ class StringToolsServer {
             },
           },
           {
-            name: "validate",
+            name: "string_validate",
             description:
               "Validate strings against various patterns and rules including email, URL, phone, and custom patterns",
             inputSchema: {
@@ -244,7 +244,7 @@ class StringToolsServer {
 
       try {
         switch (name) {
-          case "compare": {
+          case "string_compare": {
             const result = StringTools.compare(
               args.str1 as string,
               args.str2 as string,
@@ -253,7 +253,7 @@ class StringToolsServer {
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
 
-          case "transform": {
+          case "string_transform": {
             const result = StringTools.transform(
               args.text as string,
               (args.operations as any[]) || [],
@@ -261,12 +261,12 @@ class StringToolsServer {
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
 
-          case "analyze": {
+          case "string_analyze": {
             const result = StringTools.analyze(args.text as string);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
 
-          case "diff": {
+          case "string_diff": {
             const result = StringTools.diff(
               args.str1 as string,
               args.str2 as string,
@@ -275,7 +275,7 @@ class StringToolsServer {
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
 
-          case "validate": {
+          case "string_validate": {
             const result = StringTools.validate(
               args.text as string,
               (args.rules as any[]) || [],
@@ -319,7 +319,6 @@ class StringToolsServer {
   // ----- HTTP (Streamable) -----
   async runOnHttp(): Promise<void> {
     const app = express();
-    app.use(express.json({ limit: "2mb" }));
 
     app.use(
       cors({
@@ -333,6 +332,14 @@ class StringToolsServer {
       res.status(200).send("ok\n");
     });
 
+    const jsonUnlessMcp = (req: Request, res: Response, next: () => void): void => {
+      if (req.path === HTTP_PATH) {
+        return next();
+      }
+      return express.json({ limit: "2mb" })(req, res, next);
+    };
+    app.use(jsonUnlessMcp);
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       enableDnsRebindingProtection: true,
@@ -340,8 +347,22 @@ class StringToolsServer {
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });
 
-    app.all(HTTP_PATH, async (req: Request, res: Response): Promise<void> => {
-      await transport.handleRequest(req, res);
+    app.all(HTTP_PATH, async (req: Request, res: Response) => {
+      try {
+        // Log incoming request for debugging
+        console.error(`[HTTP] ${req.method} ${req.originalUrl || req.url} from ${req.ip || req.hostname}`);
+        const sessionId = (req.headers["mcp-session-id"] as string | undefined) || (req.headers["Mcp-Session-Id"] as string | undefined);
+        if (sessionId) console.error("MCP-Session-Id:", sessionId);
+        try {
+          console.error("Headers:", JSON.stringify(req.headers, null, 2));
+        } catch {
+          console.error("Headers: <unable to stringify>");
+        }
+        await transport.handleRequest(req, res);
+      } catch (e) {
+        console.error("[Transport error]", e);
+        if (!res.headersSent) res.status(500).end();
+      }
     });
 
     await this.server.connect(transport);

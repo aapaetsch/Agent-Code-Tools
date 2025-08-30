@@ -24,7 +24,7 @@ import {
 import { MathTools } from "./tools/math-tools.js";
 
 // ---------- Config ----------
-const TRANSPORT = (process.env.TRANSPORT || "both").toLowerCase(); // stdio | http | both
+const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
 const HTTP_PORT = Number(process.env.PORT || process.env.HTTP_PORT || 3002);
 const HTTP_PATH = process.env.HTTP_PATH || "/mcp";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
@@ -67,7 +67,7 @@ class MathToolsServer {
       return {
         tools: [
           {
-            name: "calculate",
+            name: "math_calculate",
             description:
               "Perform basic arithmetic calculations with support for +, -, *, /, and parentheses",
             inputSchema: {
@@ -83,7 +83,7 @@ class MathToolsServer {
             },
           },
           {
-            name: "compare",
+            name: "math_compare",
             description: "Compare two numbers using various comparison operators",
             inputSchema: {
               type: "object",
@@ -100,7 +100,7 @@ class MathToolsServer {
             },
           },
           {
-            name: "parse_numbers",
+            name: "math_parse_numbers",
             description: "Extract and parse numbers from text with various options",
             inputSchema: {
               type: "object",
@@ -119,7 +119,7 @@ class MathToolsServer {
             },
           },
           {
-            name: "format_number",
+            name: "math_format_number",
             description:
               "Format numbers (decimals, separators, currency, percentage, prefix/suffix)",
             inputSchema: {
@@ -144,7 +144,7 @@ class MathToolsServer {
             },
           },
           {
-            name: "sanitize_number",
+            name: "math_sanitize_number",
             description:
               "Clean a numeric string by removing invalid characters and normalizing format",
             inputSchema: {
@@ -165,7 +165,7 @@ class MathToolsServer {
             },
           },
           {
-            name: "statistics",
+            name: "math_statistics",
             description: "Compute stats (mean, median, mode, etc.) for a set of numbers",
             inputSchema: {
               type: "object",
@@ -195,11 +195,11 @@ class MathToolsServer {
 
       try {
         switch (name) {
-          case "calculate": {
+          case "math_calculate": {
             const result = MathTools.calculate(args.expression as string);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-          case "compare": {
+          case "math_compare": {
             const result = MathTools.compare(
               args.num1 as number | string,
               args.num2 as number | string,
@@ -207,19 +207,19 @@ class MathToolsServer {
             );
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-          case "parse_numbers": {
+          case "math_parse_numbers": {
             const result = MathTools.parseNumbers(args.text as string, args.options as any);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-          case "format_number": {
+          case "math_format_number": {
             const result = MathTools.formatNumber(args.number as number | string, args.options as any);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-          case "sanitize_number": {
+          case "math_sanitize_number": {
             const result = MathTools.sanitizeNumber(args.input as string, args.options as any);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
-          case "statistics": {
+          case "math_statistics": {
             const result = MathTools.statistics(args.numbers as (number | string)[]);
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
           }
@@ -254,7 +254,6 @@ class MathToolsServer {
   // ----- HTTP (Streamable) -----
   async runOnHttp(): Promise<void> {
     const app = express();
-    app.use(express.json({ limit: "2mb" }));
 
     app.use(
       cors({
@@ -268,6 +267,14 @@ class MathToolsServer {
       res.status(200).send("ok\n");
     });
 
+    const jsonUnlessMcp = (req: Request, res: Response, next: () => void): void => {
+      if (req.path === HTTP_PATH) {
+        return next();
+      }
+      return express.json({ limit: "2mb" })(req, res, next);
+    };
+    app.use(jsonUnlessMcp);
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       enableDnsRebindingProtection: true,
@@ -275,8 +282,22 @@ class MathToolsServer {
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });
 
-    app.all(HTTP_PATH, async (req: Request, res: Response): Promise<void> => {
-      await transport.handleRequest(req, res);
+    app.all(HTTP_PATH, async (req: Request, res: Response) => {
+      try {
+        // Log incoming request for debugging
+        console.error(`[HTTP] ${req.method} ${req.originalUrl || req.url} from ${req.ip || req.hostname}`);
+        const sessionId = (req.headers["mcp-session-id"] as string | undefined) || (req.headers["Mcp-Session-Id"] as string | undefined);
+        if (sessionId) console.error("MCP-Session-Id:", sessionId);
+        try {
+          console.error("Headers:", JSON.stringify(req.headers, null, 2));
+        } catch {
+          console.error("Headers: <unable to stringify>");
+        }
+        await transport.handleRequest(req, res);
+      } catch (e) {
+        console.error("[Transport error]", e);
+        if (!res.headersSent) res.status(500).end();
+      }
     });
 
     await this.server.connect(transport);

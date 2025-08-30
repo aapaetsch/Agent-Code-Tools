@@ -67,34 +67,34 @@ A comprehensive regex utilities server providing the following tools:
 
 Mathematical calculations and number utilities:
 
-- **calculate**: Perform basic arithmetic operations (+, -, *, /, parentheses)
-- **compare**: Compare two numbers with various operators (>, <, >=, <=, ==, etc.)
-- **parse_numbers**: Extract and parse numbers from text with filtering options
-- **format_number**: Format numbers with currency, percentage, and custom separators
-- **sanitize_number**: Clean numeric strings by removing invalid characters
-- **statistics**: Calculate statistical measures (mean, median, mode, std dev, etc.)
+- **math_calculate**: Perform basic arithmetic operations (+, -, *, /, parentheses)
+- **math_compare**: Compare two numbers with various operators (>, <, >=, <=, ==, etc.)
+- **math_parse_numbers**: Extract and parse numbers from text with filtering options
+- **math_format_number**: Format numbers with currency, percentage, and custom separators
+- **math_sanitize_number**: Clean numeric strings by removing invalid characters
+- **math_statistics**: Calculate statistical measures (mean, median, mode, std dev, etc.)
 
 ### 3. String Tools Server (`servers/string-tools/`)
 
 String manipulation and comparison utilities:
 
-- **compare**: Compare strings using various methods (exact, similarity, levenshtein, etc.)
-- **transform**: Apply transformations (case changes, camelCase, snake_case, etc.)
-- **analyze**: Analyze string properties (character counts, word frequency, patterns)
-- **diff**: Find differences between strings with highlighting options
-- **validate**: Validate strings against patterns (email, URL, phone, custom regex)
+- **string_compare**: Compare strings using various methods (exact, similarity, levenshtein, etc.)
+- **string_transform**: Apply transformations (case changes, camelCase, snake_case, etc.)
+- **string_analyze**: Analyze string properties (character counts, word frequency, patterns)
+- **string_diff**: Find differences between strings with highlighting options
+- **string_validate**: Validate strings against patterns (email, URL, phone, custom regex)
 
 ### 4. Date Tools Server (`servers/date-tools/`)
 
 Date parsing, formatting, and manipulation utilities:
 
-- **parse**: Parse dates from various string formats with flexible options
-- **format**: Format dates to specified patterns (YYYY-MM-DD, MM/DD/YYYY, etc.)
-- **convert**: Convert dates from one format to another
-- **arithmetic**: Add/subtract time periods (years, months, days, hours, etc.)
-- **compare**: Compare dates and calculate differences with various precision
-- **info**: Get comprehensive date information (calendar details, relative info)
-- **validate**: Validate dates against formats and business rules
+- **date_parse**: Parse dates from various string formats with flexible options
+- **date_format**: Format dates to specified patterns (YYYY-MM-DD, MM/DD/YYYY, etc.)
+- **date_convert**: Convert dates from one format to another
+- **date_arithmetic**: Add/subtract time periods (years, months, days, hours, etc.)
+- **date_compare**: Compare dates and calculate differences with various precision
+- **date_info**: Get comprehensive date information (calendar details, relative info)
+- **date_validate**: Validate dates against formats and business rules
 
 ## Installation & Setup
 
@@ -136,14 +136,14 @@ Each server provides focused, specialized functionality. Here are some examples:
 #### Math Tools Examples
 ```json
 {
-  "tool": "calculate",
+  "tool": "math_calculate",
   "arguments": {
     "expression": "(10 + 5) * 2 - 8 / 4"
   }
 }
 
 {
-  "tool": "compare",
+  "tool": "math_compare",
   "arguments": {
     "num1": 15.7,
     "num2": 15.70,
@@ -152,7 +152,7 @@ Each server provides focused, specialized functionality. Here are some examples:
 }
 
 {
-  "tool": "statistics",
+  "tool": "math_statistics",
   "arguments": {
     "numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   }
@@ -162,7 +162,7 @@ Each server provides focused, specialized functionality. Here are some examples:
 #### String Tools Examples
 ```json
 {
-  "tool": "compare",
+  "tool": "string_compare",
   "arguments": {
     "str1": "Hello World",
     "str2": "hello world",
@@ -171,7 +171,7 @@ Each server provides focused, specialized functionality. Here are some examples:
 }
 
 {
-  "tool": "transform",
+  "tool": "string_transform",
   "arguments": {
     "text": "Hello World Example",
     "operations": [
@@ -182,7 +182,7 @@ Each server provides focused, specialized functionality. Here are some examples:
 }
 
 {
-  "tool": "validate",
+  "tool": "string_validate",
   "arguments": {
     "text": "user@example.com",
     "rules": [
@@ -196,14 +196,14 @@ Each server provides focused, specialized functionality. Here are some examples:
 #### Date Tools Examples
 ```json
 {
-  "tool": "parse",
+  "tool": "date_parse",
   "arguments": {
     "dateString": "2024-03-15 14:30:00"
   }
 }
 
 {
-  "tool": "arithmetic",
+  "tool": "date_arithmetic",
   "arguments": {
     "date": "2024-01-01",
     "operations": [
@@ -214,7 +214,7 @@ Each server provides focused, specialized functionality. Here are some examples:
 }
 
 {
-  "tool": "format",
+  "tool": "date_format",
   "arguments": {
     "date": "2024-03-15T14:30:00Z",
     "format": "MM/DD/YYYY at HH:mm"

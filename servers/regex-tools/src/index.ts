@@ -26,7 +26,7 @@ import {
 import { RegexTools } from "./tools/regex-tools.js";
 
 // ---------- Config ----------
-const TRANSPORT = (process.env.TRANSPORT || "both").toLowerCase(); // stdio | http | both
+const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
 const HTTP_PORT = Number(process.env.PORT || process.env.HTTP_PORT || 3001);
 const HTTP_PATH = process.env.HTTP_PATH || "/mcp"; // nginx can prefix/strip paths
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
@@ -340,35 +340,52 @@ class RegexToolsServer {
   // ----- HTTP (Streamable) -----
   async runOnHttp(): Promise<void> {
     const app = express();
-    app.use(express.json({ limit: "2mb" }));
 
-    // CORS for browser/remote clients (expose session header per SDK docs)
     app.use(
       cors({
         origin: ALLOWED_ORIGINS.includes("*") ? true : ALLOWED_ORIGINS,
         credentials: true,
-        exposedHeaders: ["Mcp-Session-Id"], // important for clients
+        exposedHeaders: ["Mcp-Session-Id"],
       }),
     );
 
-    // Health probe
-    app.get("/health", (_req: Request, res: Response) => res.status(200).send("ok\n"));
+    app.get("/health", (_req: Request, res: Response): void => {
+      res.status(200).send("ok\n");
+    });
 
-    // Streamable HTTP transport with secure defaults
+    const jsonUnlessMcp = (req: Request, res: Response, next: () => void): void => {
+      if (req.path === HTTP_PATH) {
+        return next();
+      }
+      return express.json({ limit: "2mb" })(req, res, next);
+    };
+    app.use(jsonUnlessMcp);
+
     const transport = new StreamableHTTPServerTransport({
-      // sessions recommended for stateful flows
       sessionIdGenerator: () => randomUUID(),
       enableDnsRebindingProtection: true,
       allowedHosts: ALLOWED_HOSTS,
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });
 
-    // Bind the SDK transport to Express at one path (POST/GET supported)
     app.all(HTTP_PATH, async (req: Request, res: Response) => {
-      await transport.handleRequest(req, res);
+      try {
+        // Log incoming request for debugging
+        console.error(`[HTTP] ${req.method} ${req.originalUrl || req.url} from ${req.ip || req.hostname}`);
+        const sessionId = (req.headers["mcp-session-id"] as string | undefined) || (req.headers["Mcp-Session-Id"] as string | undefined);
+        if (sessionId) console.error("MCP-Session-Id:", sessionId);
+        try {
+          console.error("Headers:", JSON.stringify(req.headers, null, 2));
+        } catch {
+          console.error("Headers: <unable to stringify>");
+        }
+        await transport.handleRequest(req, res);
+      } catch (e) {
+        console.error("[Transport error]", e);
+        if (!res.headersSent) res.status(500).end();
+      }
     });
 
-    // Connect MCP server to the transport
     await this.server.connect(transport);
 
     app.listen(HTTP_PORT, () => {

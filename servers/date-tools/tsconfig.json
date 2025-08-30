@@ -6,7 +6,8 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "isolatedModules": true
   },
   "include": [
     "src/**/*"

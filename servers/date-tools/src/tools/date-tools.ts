@@ -42,6 +42,8 @@ export class DateTools {
         parsedDate = new Date(dateString);
       }
 
+      console.warn('Parsed date:', parsedDate);
+
       if (isNaN(parsedDate.getTime())) {
         // Try some common formats
         const commonFormats = [

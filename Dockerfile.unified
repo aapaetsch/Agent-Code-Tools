@@ -60,26 +60,77 @@ COPY servers/math-tools/package*.json  servers/math-tools/
 COPY servers/string-tools/package*.json servers/string-tools/
 COPY servers/date-tools/package*.json  servers/date-tools/
 
-# PM2 ecosystem config (unchanged)
-COPY --chown=nodejs:nodejs <<'EOF' ecosystem.config.js
+# PM2 ecosystem config (cleaned)
+COPY --chown=nodejs:nodejs <<'EOF' ecosystem.config.cjs
+const COMMON_HOSTS = [
+  "localhost",
+  "127.0.0.1",
+].join(",");
+
+const COMMON_ORIGINS = [
+  "http://localhost",
+  "*"
+].join(",");
+
 module.exports = {
   apps: [
-    { name: 'regex-tools',  script: 'servers/regex-tools/build/index.js',
-      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3001, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
-    { name: 'math-tools',   script: 'servers/math-tools/build/index.js',
-      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3002, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
-    { name: 'string-tools', script: 'servers/string-tools/build/index.js',
-      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3003, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } },
-    { name: 'date-tools',   script: 'servers/date-tools/build/index.js',
-      env: { NODE_ENV: 'production', TRANSPORT: 'http', PORT: 3004, HTTP_PATH: '/mcp', ALLOWED_HOSTS: '0.0.0.0,localhost,127.0.0.1', ALLOWED_ORIGINS: '*' } }
-  ]
+    {
+      name: 'regex-tools',
+      script: 'servers/regex-tools/build/index.js',
+      env: {
+        NODE_ENV: 'production',
+        TRANSPORT: 'http',
+        PORT: 3001,
+        HTTP_PATH: '/mcp',
+        ALLOWED_HOSTS: COMMON_HOSTS,
+        ALLOWED_ORIGINS: COMMON_ORIGINS,
+      },
+    },
+    {
+      name: 'math-tools',
+      script: 'servers/math-tools/build/index.js',
+      env: {
+        NODE_ENV: 'production',
+        TRANSPORT: 'http',
+        PORT: 3002,
+        HTTP_PATH: '/mcp',
+        ALLOWED_HOSTS: COMMON_HOSTS,
+        ALLOWED_ORIGINS: COMMON_ORIGINS,
+      },
+    },
+    {
+      name: 'string-tools',
+      script: 'servers/string-tools/build/index.js',
+      env: {
+        NODE_ENV: 'production',
+        TRANSPORT: 'http',
+        PORT: 3003,
+        HTTP_PATH: '/mcp',
+        ALLOWED_HOSTS: COMMON_HOSTS,
+        ALLOWED_ORIGINS: COMMON_ORIGINS,
+      },
+    },
+    {
+      name: 'date-tools',
+      script: 'servers/date-tools/build/index.js',
+      env: {
+        NODE_ENV: 'production',
+        TRANSPORT: 'http',
+        PORT: 3004,
+        HTTP_PATH: '/mcp',
+        ALLOWED_HOSTS: COMMON_HOSTS,
+        ALLOWED_ORIGINS: COMMON_ORIGINS,
+      },
+    },
+  ],
 };
 EOF
+
 
 EXPOSE 3001 3002 3003 3004
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD pm2 jlist | grep -q '"status":"online"' || exit 1
 
 ENTRYPOINT ["dumb-init","--"]
-CMD ["pm2-runtime","start","ecosystem.config.js"]
+CMD ["pm2-runtime","start","ecosystem.config.cjs"]
 
