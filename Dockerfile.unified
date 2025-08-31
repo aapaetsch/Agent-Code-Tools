@@ -65,10 +65,18 @@ COPY --chown=nodejs:nodejs <<'EOF' ecosystem.config.cjs
 const COMMON_HOSTS = [
   "localhost",
   "127.0.0.1",
+  "mcp-all-servers",
+  "mcp-gateway",
+  "*"
 ].join(",");
 
 const COMMON_ORIGINS = [
+  "http://desktop-ud1s28m.tailec7cc2.ts.net",
+  "https://desktop-ud1s28m.tailec7cc2.ts.net",
+  "https://desktop-ud1s28m.tailec7cc2.ts.net:8888",
+  "https://desktop-ud1s28m.tailec7cc2.ts.net:8443",
   "http://localhost",
+  "http://127.0.0.1",
   "*"
 ].join(",");
 

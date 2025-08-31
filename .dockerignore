@@ -12,3 +12,7 @@ coverage
 src/**/*.ts
 .dockerignore
 Dockerfile
+*.test.ts
+*.test.js
+*.test.ts.map
+*.test.js.map

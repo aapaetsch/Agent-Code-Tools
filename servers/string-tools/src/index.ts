@@ -21,12 +21,13 @@ import {
   CallToolRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { StringTools } from "./tools/string-tools.js";
+import StringTools from "./tools/string-tools.js";
 
 // ---------- Config ----------
 const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
 const HTTP_PORT = Number(process.env.PORT || process.env.HTTP_PORT || 3003);
 const HTTP_PATH = process.env.HTTP_PATH || "/mcp";
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*")
   .split(",")
   .map((s) => s.trim())
@@ -342,7 +343,7 @@ class StringToolsServer {
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      enableDnsRebindingProtection: true,
+      enableDnsRebindingProtection: false,
       allowedHosts: ALLOWED_HOSTS,
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });

@@ -23,7 +23,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { RegexTools } from "./tools/regex-tools.js";
+import RegexTools from "./tools/regex-tools.js";
 
 // ---------- Config ----------
 const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
@@ -363,7 +363,7 @@ class RegexToolsServer {
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      enableDnsRebindingProtection: true,
+      enableDnsRebindingProtection: false,
       allowedHosts: ALLOWED_HOSTS,
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });

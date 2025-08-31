@@ -10,7 +10,7 @@ export interface RegexToolResult {
   metadata?: Record<string, any>;
 }
 
-export class RegexTools {
+export default class RegexTools {
   /**
    * Count the number of matches for a regex pattern in text
    */
@@ -109,7 +109,8 @@ export class RegexTools {
     flags?: string
   ): RegexToolResult {
     try {
-      const regex = new RegExp(pattern, flags || 'g');
+      const actualFlags = flags !== undefined ? flags : 'g';
+      const regex = new RegExp(pattern, actualFlags);
       const originalText = text;
       const newText = text.replace(regex, replacement);
       const changeCount = (originalText.match(regex) || []).length;
@@ -125,7 +126,7 @@ export class RegexTools {
         metadata: {
           pattern,
           replacement,
-          flags: flags || 'g',
+          flags: actualFlags,
           originalLength: originalText.length,
           newLength: newText.length
         }
@@ -144,7 +145,29 @@ export class RegexTools {
   static split(text: string, pattern: string, flags?: string, limit?: number): RegexToolResult {
     try {
       const regex = new RegExp(pattern, flags);
-      const parts = text.split(regex, limit);
+      let parts;
+      
+      if (limit !== undefined) {
+        // Manual implementation of split with limit for regex
+        const matches = Array.from(text.matchAll(new RegExp(pattern, flags + (flags?.includes('g') ? '' : 'g'))));
+        if (matches.length === 0) {
+          parts = [text];
+        } else {
+          parts = [];
+          let lastIndex = 0;
+          let count = 0;
+          
+          for (const match of matches) {
+            if (count >= limit - 1) break;
+            parts.push(text.slice(lastIndex, match.index));
+            lastIndex = match.index! + match[0].length;
+            count++;
+          }
+          parts.push(text.slice(lastIndex));
+        }
+      } else {
+        parts = text.split(regex);
+      }
 
       return {
         success: true,
@@ -351,27 +374,29 @@ export class RegexTools {
         ...options
       };
 
-      if (opts.trimStart && result.startsWith(/^\s+/.exec(result)?.[0] || '')) {
+      const original = result;
+
+      if (opts.trimStart && /^\s/.test(result)) {
         result = result.replace(/^\s+/, '');
         changes.push('trimmed start');
       }
 
-      if (opts.trimEnd && result.endsWith(/\s+$/.exec(result)?.[0] || '')) {
+      if (opts.trimEnd && /\s$/.test(result)) {
         result = result.replace(/\s+$/, '');
         changes.push('trimmed end');
       }
 
-      if (opts.normalizeLineBreaks) {
+      if (opts.normalizeLineBreaks && /\r/.test(result)) {
         result = result.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         changes.push('normalized line breaks');
       }
 
-      if (opts.removeLineBreaks) {
+      if (opts.removeLineBreaks && /\n/.test(result)) {
         result = result.replace(/\n+/g, ' ');
         changes.push('removed line breaks');
       }
 
-      if (opts.collapseSpaces) {
+      if (opts.collapseSpaces && /\s{2,}/.test(result)) {
         result = result.replace(/[ \t]+/g, ' ');
         changes.push('collapsed spaces');
       }

@@ -9,7 +9,9 @@
     "dev": "cross-env TRANSPORT=both PORT=${PORT:-3001} tsx src/index.ts",
     "dev:stdio": "cross-env TRANSPORT=stdio tsx src/index.ts",
     "dev:http": "cross-env TRANSPORT=http PORT=${PORT:-3001} tsx src/index.ts",
-
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "start": "node build/index.js",
     "start:stdio": "cross-env TRANSPORT=stdio node build/index.js",
     "start:http": "cross-env TRANSPORT=http PORT=${PORT:-3001} node build/index.js",
@@ -32,7 +34,10 @@
     "@types/node": "^20.0.0",
     "@types/express": "^5.0.0",
     "typescript": "^5.0.0",
-    "@types/cors": "^2.8.17"
+    "@types/jest": "^30.0.0",
+    "@types/cors": "^2.8.17",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.0"
   },
   "keywords": [
     "mcp",

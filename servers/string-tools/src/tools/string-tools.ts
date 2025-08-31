@@ -10,7 +10,7 @@ export interface StringToolResult {
   metadata?: Record<string, any>;
 }
 
-export class StringTools {
+export default class StringTools {
   /**
    * Compare two strings with various comparison methods
    */
@@ -575,7 +575,8 @@ export class StringTools {
     if (str1 === str2) return 1.0;
     if (str1.length === 0 || str2.length === 0) return 0.0;
 
-    const matchWindow = Math.max(str1.length, str2.length) / 2 - 1;
+    // Match window should use integer division
+    const matchWindow = Math.floor(Math.max(str1.length, str2.length) / 2) - 1;
     const str1Matches = new Array(str1.length).fill(false);
     const str2Matches = new Array(str2.length).fill(false);
 

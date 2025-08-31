@@ -10,7 +10,7 @@ export interface MathToolResult {
   metadata?: Record<string, any>;
 }
 
-export class MathTools {
+export default class MathTools {
   /**
    * Perform basic arithmetic calculations
    */
@@ -31,6 +31,14 @@ export class MathTools {
         return {
           success: false,
           error: 'Empty expression provided'
+        };
+      }
+
+      // Check for malformed expressions (consecutive operators)
+      if (/[+\-*/]{2,}/.test(sanitized.replace(/\s/g, ''))) {
+        return {
+          success: false,
+          error: 'Calculation error: Malformed expression with consecutive operators'
         };
       }
 
@@ -164,23 +172,43 @@ export class MathTools {
         ...options
       };
 
-      let pattern: string;
+      // First, find all numbers (integers and decimals)
+      const allNumbersPattern = '-?\\d+(?:\\.\\d+)?';
+      const allNumbersRegex = new RegExp(allNumbersPattern, 'g');
+      const matches = text.match(allNumbersRegex) || [];
       
-      if (opts.integersOnly) {
-        pattern = opts.includeNegative ? '-?\\d+' : '\\d+';
-      } else {
-        if (opts.includeDecimals) {
-          pattern = opts.includeNegative ? '-?\\d*\\.?\\d+' : '\\d*\\.?\\d+';
+      let numbers: number[] = [];
+      
+      for (const match of matches) {
+        const num = parseFloat(match);
+        if (!Number.isFinite(num)) continue;
+        
+        let processedNum = num;
+        
+        // Handle negative numbers
+        if (!opts.includeNegative && num < 0) {
+          // Convert negative to positive (absolute value)
+          processedNum = Math.abs(num);
+        }
+        
+        // Handle integersOnly and includeDecimals options
+        if (opts.integersOnly || !opts.includeDecimals) {
+          // Only include integers, but for decimal numbers like 12.99,
+          // extract the integer part (12) when integersOnly is true
+          if (Number.isInteger(processedNum)) {
+            numbers.push(processedNum);
+          } else {
+            // Extract integer part from decimal numbers
+            const integerPart = Math.trunc(processedNum);
+            if (integerPart !== 0 || match.includes('0')) {
+              numbers.push(integerPart);
+            }
+          }
         } else {
-          pattern = opts.includeNegative ? '-?\\d+' : '\\d+';
+          // Include all numbers (integers and decimals)
+          numbers.push(processedNum);
         }
       }
-
-      const regex = new RegExp(pattern, 'g');
-      const matches = text.match(regex) || [];
-      const numbers = matches
-        .map(match => parseFloat(match))
-        .filter(num => Number.isFinite(num));
 
       const integers = numbers.filter(n => Number.isInteger(n));
       const decimals = numbers.filter(n => !Number.isInteger(n));
@@ -200,7 +228,7 @@ export class MathTools {
         metadata: {
           originalText: text,
           options: opts,
-          pattern: pattern
+          pattern: allNumbersPattern
         }
       };
     } catch (error) {

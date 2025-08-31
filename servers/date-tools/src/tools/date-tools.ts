@@ -10,7 +10,7 @@ export interface DateToolResult {
   metadata?: Record<string, any>;
 }
 
-export class DateTools {
+export default class DateTools {
   /**
    * Parse date from various string formats
    */
@@ -24,6 +24,14 @@ export class DateTools {
     }
   ): DateToolResult {
     try {
+      // Handle null/undefined inputs
+      if (dateString == null || dateString === '') {
+        return {
+          success: false,
+          error: 'Date string cannot be null, undefined, or empty'
+        };
+      }
+
       const opts = {
         timezone: 'UTC',
         locale: 'en-US',
@@ -41,8 +49,6 @@ export class DateTools {
         // Use native Date parsing
         parsedDate = new Date(dateString);
       }
-
-      console.warn('Parsed date:', parsedDate);
 
       if (isNaN(parsedDate.getTime())) {
         // Try some common formats
@@ -73,17 +79,17 @@ export class DateTools {
         parsed: parsedDate.toISOString(),
         timestamp: parsedDate.getTime(),
         components: {
-          year: parsedDate.getFullYear(),
-          month: parsedDate.getMonth() + 1,
-          day: parsedDate.getDate(),
-          hour: parsedDate.getHours(),
-          minute: parsedDate.getMinutes(),
-          second: parsedDate.getSeconds(),
-          millisecond: parsedDate.getMilliseconds(),
-          weekday: parsedDate.getDay(),
-          weekdayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parsedDate.getDay()],
+          year: opts.timezone === 'UTC' ? parsedDate.getUTCFullYear() : parsedDate.getFullYear(),
+          month: (opts.timezone === 'UTC' ? parsedDate.getUTCMonth() : parsedDate.getMonth()) + 1,
+          day: opts.timezone === 'UTC' ? parsedDate.getUTCDate() : parsedDate.getDate(),
+          hour: opts.timezone === 'UTC' ? parsedDate.getUTCHours() : parsedDate.getHours(),
+          minute: opts.timezone === 'UTC' ? parsedDate.getUTCMinutes() : parsedDate.getMinutes(),
+          second: opts.timezone === 'UTC' ? parsedDate.getUTCSeconds() : parsedDate.getSeconds(),
+          millisecond: opts.timezone === 'UTC' ? parsedDate.getUTCMilliseconds() : parsedDate.getMilliseconds(),
+          weekday: opts.timezone === 'UTC' ? parsedDate.getUTCDay() : parsedDate.getDay(),
+          weekdayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][opts.timezone === 'UTC' ? parsedDate.getUTCDay() : parsedDate.getDay()],
           monthName: ['January', 'February', 'March', 'April', 'May', 'June', 
-                     'July', 'August', 'September', 'October', 'November', 'December'][parsedDate.getMonth()]
+                     'July', 'August', 'September', 'October', 'November', 'December'][opts.timezone === 'UTC' ? parsedDate.getUTCMonth() : parsedDate.getMonth()]
         },
         formats: {
           iso: parsedDate.toISOString(),
@@ -123,6 +129,14 @@ export class DateTools {
     }
   ): DateToolResult {
     try {
+      // Handle null/undefined inputs
+      if (date == null || format == null) {
+        return {
+          success: false,
+          error: 'Date and format cannot be null or undefined'
+        };
+      }
+
       const opts = {
         timezone: 'UTC',
         locale: 'en-US',
@@ -442,17 +456,17 @@ export class DateTools {
           date: dateObj.toISOString(),
           timestamp: dateObj.getTime(),
           components: {
-            year: dateObj.getFullYear(),
-            month: dateObj.getMonth() + 1,
-            day: dateObj.getDate(),
-            hour: dateObj.getHours(),
-            minute: dateObj.getMinutes(),
-            second: dateObj.getSeconds(),
-            millisecond: dateObj.getMilliseconds(),
-            weekday: dateObj.getDay(),
-            weekdayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()],
+            year: dateObj.getUTCFullYear(),
+            month: dateObj.getUTCMonth() + 1,
+            day: dateObj.getUTCDate(),
+            hour: dateObj.getUTCHours(),
+            minute: dateObj.getUTCMinutes(),
+            second: dateObj.getUTCSeconds(),
+            millisecond: dateObj.getUTCMilliseconds(),
+            weekday: dateObj.getUTCDay(),
+            weekdayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getUTCDay()],
             monthName: ['January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'][dateObj.getMonth()]
+                       'July', 'August', 'September', 'October', 'November', 'December'][dateObj.getUTCMonth()]
           },
           calendar: {
             dayOfYear,
@@ -624,11 +638,24 @@ export class DateTools {
     let pattern = format;
     const captureGroups: string[] = [];
 
-    for (const [token, regex] of Object.entries(formatMap)) {
-      if (pattern.includes(token)) {
-        pattern = pattern.replace(token, regex);
-        captureGroups.push(token);
+    // Find all tokens in the order they appear in the format string
+    const tokenOrder = ['YYYY', 'YY', 'MM', 'DD', 'HH', 'mm', 'ss'];
+    const foundTokens: Array<{token: string, position: number}> = [];
+
+    for (const token of tokenOrder) {
+      const position = pattern.indexOf(token);
+      if (position !== -1) {
+        foundTokens.push({token, position});
       }
+    }
+
+    // Sort by position in the format string
+    foundTokens.sort((a, b) => a.position - b.position);
+
+    // Replace tokens with regex groups in the correct order
+    for (const {token} of foundTokens) {
+      pattern = pattern.replace(token, formatMap[token]);
+      captureGroups.push(token);
     }
 
     const match = dateString.match(new RegExp(pattern));
@@ -653,20 +680,21 @@ export class DateTools {
   }
 
   private static applyFormat(date: Date, format: string, options: any): string {
+    const useUTC = options.timezone === 'UTC';
     const formatMap: { [key: string]: string | number } = {
-      'YYYY': date.getFullYear(),
-      'YY': String(date.getFullYear()).slice(-2),
-      'MM': String(date.getMonth() + 1).padStart(2, '0'),
-      'M': date.getMonth() + 1,
-      'DD': String(date.getDate()).padStart(2, '0'),
-      'D': date.getDate(),
-      'HH': String(date.getHours()).padStart(2, '0'),
-      'H': date.getHours(),
-      'mm': String(date.getMinutes()).padStart(2, '0'),
-      'm': date.getMinutes(),
-      'ss': String(date.getSeconds()).padStart(2, '0'),
-      's': date.getSeconds(),
-      'SSS': String(date.getMilliseconds()).padStart(3, '0')
+      'YYYY': useUTC ? date.getUTCFullYear() : date.getFullYear(),
+      'YY': String(useUTC ? date.getUTCFullYear() : date.getFullYear()).slice(-2),
+      'MM': String((useUTC ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0'),
+      'M': (useUTC ? date.getUTCMonth() : date.getMonth()) + 1,
+      'DD': String(useUTC ? date.getUTCDate() : date.getDate()).padStart(2, '0'),
+      'D': useUTC ? date.getUTCDate() : date.getDate(),
+      'HH': String(useUTC ? date.getUTCHours() : date.getHours()).padStart(2, '0'),
+      'H': useUTC ? date.getUTCHours() : date.getHours(),
+      'mm': String(useUTC ? date.getUTCMinutes() : date.getMinutes()).padStart(2, '0'),
+      'm': useUTC ? date.getUTCMinutes() : date.getMinutes(),
+      'ss': String(useUTC ? date.getUTCSeconds() : date.getSeconds()).padStart(2, '0'),
+      's': useUTC ? date.getUTCSeconds() : date.getSeconds(),
+      'SSS': String(useUTC ? date.getUTCMilliseconds() : date.getMilliseconds()).padStart(3, '0')
     };
 
     let result = format;

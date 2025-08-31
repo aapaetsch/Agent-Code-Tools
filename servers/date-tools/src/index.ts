@@ -21,7 +21,7 @@ import {
   CallToolRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { DateTools } from "./tools/date-tools.js";
+import DateTools from "./tools/date-tools.js";
 
 // ---------- Config ----------
 const TRANSPORT = (process.env.MCP_TRANSPORT || "both").toLowerCase(); // stdio | http | both
@@ -321,7 +321,7 @@ class DateToolsServer {
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      enableDnsRebindingProtection: true,
+      enableDnsRebindingProtection: false,
       allowedHosts: ALLOWED_HOSTS,
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });
