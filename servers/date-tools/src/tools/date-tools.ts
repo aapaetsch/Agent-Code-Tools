@@ -12,7 +12,14 @@ export interface DateToolResult {
 
 export default class DateTools {
   /**
-   * Parse date from various string formats
+   * Parse date from various string formats.
+   * @param {string} dateString - Date string to parse.
+   * @param {Object} [options] - Parse options.
+   * @param {string} [options.format] - Explicit format pattern (e.g., YYYY-MM-DD). If omitted, attempts auto-detection.
+   * @param {string} [options.timezone='UTC'] - Timezone context for components (UTC or local).
+   * @param {string} [options.locale='en-US'] - Locale for formatted outputs.
+   * @param {boolean} [options.strict=false] - When true, enforce provided format strictly.
+   * @returns {DateToolResult} Parsed ISO date, timestamp, components, and formats.
    */
   static parse(
     dateString: string,
@@ -118,7 +125,13 @@ export default class DateTools {
   }
 
   /**
-   * Format date to specified format string
+   * Format date to specified format string.
+   * @param {string|number|Date} date - Input date (ISO string, timestamp, or Date).
+   * @param {string} format - Format pattern (e.g., YYYY-MM-DD HH:mm:ss).
+   * @param {Object} [options] - Format options.
+   * @param {string} [options.timezone='UTC'] - Timezone context for tokens.
+   * @param {string} [options.locale='en-US'] - Locale for any localized outputs.
+   * @returns {DateToolResult} Formatted string and metadata.
    */
   static format(
     date: string | number | Date,
@@ -187,7 +200,14 @@ export default class DateTools {
   }
 
   /**
-   * Convert date from one format to another
+   * Convert date from one format to another.
+   * @param {string} dateString - Date string in the source format.
+   * @param {string} fromFormat - Source format pattern.
+   * @param {string} toFormat - Target format pattern.
+   * @param {Object} [options] - Conversion options.
+   * @param {string} [options.timezone] - Timezone context for parsing/formatting.
+   * @param {string} [options.locale] - Locale for any localized outputs.
+   * @returns {DateToolResult} Converted string and intermediate parse result.
    */
   static convert(
     dateString: string,
@@ -236,7 +256,10 @@ export default class DateTools {
   }
 
   /**
-   * Perform date arithmetic (add/subtract time periods)
+   * Perform date arithmetic (add/subtract time periods).
+   * @param {string|number|Date} date - Base date.
+   * @param {Array<{unit: 'years'|'months'|'weeks'|'days'|'hours'|'minutes'|'seconds'|'milliseconds', value: number, operation: 'add'|'subtract'}>} operations - Steps to apply in order.
+   * @returns {DateToolResult} Final date, timestamps, and step-by-step changes.
    */
   static arithmetic(
     date: string | number | Date,
@@ -334,7 +357,13 @@ export default class DateTools {
   }
 
   /**
-   * Compare two dates and calculate differences
+   * Compare two dates and calculate differences.
+   * @param {string|number|Date} date1 - First date.
+   * @param {string|number|Date} date2 - Second date.
+   * @param {Object} [options] - Comparison options.
+   * @param {'years'|'months'|'weeks'|'days'|'hours'|'minutes'|'seconds'|'milliseconds'} [options.precision='milliseconds'] - Primary unit for difference summary.
+   * @param {boolean} [options.absolute=false] - When true, return absolute differences.
+   * @returns {DateToolResult} Differences across units and human-readable summary.
    */
   static compare(
     date1: string | number | Date,
@@ -415,7 +444,9 @@ export default class DateTools {
   }
 
   /**
-   * Get information about a specific date
+   * Get information about a specific date.
+   * @param {string|number|Date} date - Date to inspect.
+   * @returns {DateToolResult} Components, calendar info, relative info, and formats.
    */
   static info(date: string | number | Date): DateToolResult {
     try {
@@ -512,7 +543,16 @@ export default class DateTools {
   }
 
   /**
-   * Validate if a date string matches a specific format
+   * Validate if a date string matches a specific format and constraints.
+   * @param {string} dateString - Date string to validate.
+   * @param {string} [format] - Expected format pattern; if omitted, attempt auto-detection.
+   * @param {Object} [options] - Validation options.
+   * @param {boolean} [options.strict=false] - Enforce exact parsing of the format.
+   * @param {boolean} [options.allowFuture=true] - Whether future dates are allowed.
+   * @param {boolean} [options.allowPast=true] - Whether past dates are allowed.
+   * @param {string|Date} [options.minDate] - Minimum allowed date.
+   * @param {string|Date} [options.maxDate] - Maximum allowed date.
+   * @returns {DateToolResult} Validation results with any errors and counts.
    */
   static validate(
     dateString: string,

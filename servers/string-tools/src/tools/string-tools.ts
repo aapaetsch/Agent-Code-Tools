@@ -12,7 +12,11 @@ export interface StringToolResult {
 
 export default class StringTools {
   /**
-   * Compare two strings with various comparison methods
+   * Compare two strings with various comparison methods.
+   * @param {string} str1 - First string to compare.
+   * @param {string} str2 - Second string to compare.
+   * @param {'exact'|'case_insensitive'|'length'|'levenshtein'|'similarity'|'contains'|'starts_with'|'ends_with'} [method='exact'] - Comparison method to use.
+   * @returns {StringToolResult} Comparison details and outcome.
    */
   static compare(
     str1: string,
@@ -130,7 +134,10 @@ export default class StringTools {
   }
 
   /**
-   * Transform strings with various operations
+   * Transform strings with various operations.
+   * @param {string} text - Input text to transform.
+   * @param {Array<{type: 'uppercase'|'lowercase'|'title'|'camel'|'pascal'|'snake'|'kebab'|'reverse'|'trim'|'pad', options?: any}>} operations - Ordered list of transformations to apply.
+   * @returns {StringToolResult} Original, transformed text, and applied transformations.
    */
   static transform(
     text: string,
@@ -268,7 +275,9 @@ export default class StringTools {
   }
 
   /**
-   * Analyze string properties and characteristics
+   * Analyze string properties and characteristics.
+   * @param {string} text - Text to analyze.
+   * @returns {StringToolResult} Counts, character breakdown, frequencies, and pattern flags.
    */
   static analyze(text: string): StringToolResult {
     try {
@@ -359,7 +368,14 @@ export default class StringTools {
   }
 
   /**
-   * Find and highlight differences between two strings
+   * Find and highlight differences between two strings.
+   * @param {string} str1 - Original string.
+   * @param {string} str2 - Comparison string.
+   * @param {Object} [options] - Diff options.
+   * @param {boolean} [options.ignoreCase=false] - Ignore case when diffing.
+   * @param {boolean} [options.ignoreWhitespace=false] - Collapse whitespace before diffing.
+   * @param {boolean} [options.wordLevel=false] - Compute word-level instead of character-level diff.
+   * @returns {StringToolResult} Diff metrics and similarity.
    */
   static diff(str1: string, str2: string, options?: {
     ignoreCase?: boolean;
@@ -426,7 +442,10 @@ export default class StringTools {
   }
 
   /**
-   * Validate string against various patterns and rules
+   * Validate string against various patterns and rules.
+   * @param {string} text - Text to validate.
+   * @param {Array<{type: 'email'|'url'|'phone'|'length'|'pattern'|'required'|'numeric'|'alpha'|'alphanumeric', options?: any, message?: string}>} rules - Validation rules to apply.
+   * @returns {StringToolResult} Per-rule validation results and summary.
    */
   static validate(
     text: string,

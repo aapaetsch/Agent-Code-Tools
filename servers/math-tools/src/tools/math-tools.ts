@@ -12,7 +12,9 @@ export interface MathToolResult {
 
 export default class MathTools {
   /**
-   * Perform basic arithmetic calculations
+   * Perform basic arithmetic calculations.
+   * @param {string} expression - Arithmetic expression to evaluate. Only digits, +, -, *, /, (, ) and spaces are allowed.
+   * @returns {MathToolResult} Result with evaluated value and metadata, or an error message.
    */
   static calculate(expression: string): MathToolResult {
     try {
@@ -74,7 +76,11 @@ export default class MathTools {
   }
 
   /**
-   * Compare two numbers with various operators
+   * Compare two numbers with various operators.
+   * @param {number|string} num1 - First value to compare (number or numeric string).
+   * @param {number|string} num2 - Second value to compare (number or numeric string).
+   * @param {'>'|'<'|'>='|'<='|'=='|'!='|'==='|'!==' } operator - Comparison operator to use.
+   * @returns {MathToolResult} Result containing boolean outcome and description.
    */
   static compare(
     num1: number | string, 
@@ -157,7 +163,13 @@ export default class MathTools {
   }
 
   /**
-   * Extract and parse numbers from text
+   * Extract and parse numbers from text.
+   * @param {string} text - Source text to scan for numbers.
+   * @param {Object} [options] - Parsing options.
+   * @param {boolean} [options.integersOnly=false] - When true, return only integer values (decimal parts are truncated).
+   * @param {boolean} [options.includeNegative=true] - Whether to include negative numbers; if false, negatives are converted to positive.
+   * @param {boolean} [options.includeDecimals=true] - Whether to include decimal numbers.
+   * @returns {MathToolResult} Parsed numbers and statistics.
    */
   static parseNumbers(text: string, options?: {
     integersOnly?: boolean;
@@ -240,7 +252,18 @@ export default class MathTools {
   }
 
   /**
-   * Format numbers with various options
+   * Format numbers with various options.
+   * @param {number|string} number - Number to format (number or numeric string).
+   * @param {Object} [options] - Formatting options.
+   * @param {number} [options.decimals=2] - Number of decimal places.
+   * @param {string} [options.thousandsSeparator=","] - Thousands separator character.
+   * @param {string} [options.decimalSeparator= "."] - Decimal separator character.
+   * @param {string} [options.prefix=""] - String to prepend.
+   * @param {string} [options.suffix=""] - String to append.
+   * @param {boolean} [options.percentage=false] - When true, multiply by 100 and append a %.
+   * @param {string} [options.currency] - ISO 4217 currency code for localized currency formatting.
+   * @param {string} [options.locale="en-US"] - Locale used for currency formatting.
+   * @returns {MathToolResult} Formatted string and numeric value.
    */
   static formatNumber(
     number: number | string,
@@ -340,7 +363,14 @@ export default class MathTools {
   }
 
   /**
-   * Clean and sanitize numeric strings
+   * Clean and sanitize numeric strings.
+   * @param {string} input - Raw input string containing numeric content.
+   * @param {Object} [options] - Sanitization options.
+   * @param {boolean} [options.allowDecimals=true] - Whether to allow decimal separator.
+   * @param {boolean} [options.allowNegative=true] - Whether to allow negative numbers.
+   * @param {string} [options.thousandsSeparator=","] - Thousands separator to remove.
+   * @param {string} [options.decimalSeparator="."] - Decimal separator to normalize to '.'.
+   * @returns {MathToolResult} Sanitized string and parsed number if valid.
    */
   static sanitizeNumber(
     input: string,
@@ -438,7 +468,9 @@ export default class MathTools {
   }
 
   /**
-   * Perform statistical calculations on an array of numbers
+   * Perform statistical calculations on an array of numbers.
+   * @param {(number|string)[]} numbers - Values to analyze (numbers or numeric strings).
+   * @returns {MathToolResult} Summary statistics including mean, median, mode, etc.
    */
   static statistics(numbers: (number | string)[]): MathToolResult {
     try {

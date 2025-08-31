@@ -259,7 +259,7 @@ class MathToolsServer {
       cors({
         origin: ALLOWED_ORIGINS.includes("*") ? true : ALLOWED_ORIGINS,
         credentials: true,
-        exposedHeaders: ["Mcp-Session-Id"],
+        exposedHeaders: ["Mcp-Session-Id", "MCP-Session-Id"],
       }),
     );
 
@@ -267,8 +267,10 @@ class MathToolsServer {
       res.status(200).send("ok\n");
     });
 
+    // Don't apply JSON middleware to MCP path - let StreamableHTTPServerTransport handle raw body
     const jsonUnlessMcp = (req: Request, res: Response, next: () => void): void => {
       if (req.path === HTTP_PATH) {
+        // For MCP path, don't consume the request body - let transport handle it
         return next();
       }
       return express.json({ limit: "2mb" })(req, res, next);
@@ -277,26 +279,122 @@ class MathToolsServer {
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      enableDnsRebindingProtection: false,
+      enableDnsRebindingProtection: false, // Temporarily disable for debugging
       allowedHosts: ALLOWED_HOSTS,
       allowedOrigins: ALLOWED_ORIGINS.includes("*") ? undefined : ALLOWED_ORIGINS,
     });
 
     app.all(HTTP_PATH, async (req: Request, res: Response) => {
+      const requestId = Math.random().toString(36).substr(2, 9);
+      
       try {
-        // Log incoming request for debugging
-        console.error(`[HTTP] ${req.method} ${req.originalUrl || req.url} from ${req.ip || req.hostname}`);
-        const sessionId = (req.headers["mcp-session-id"] as string | undefined) || (req.headers["Mcp-Session-Id"] as string | undefined);
-        if (sessionId) console.error("MCP-Session-Id:", sessionId);
-        try {
-          console.error("Headers:", JSON.stringify(req.headers, null, 2));
-        } catch {
-          console.error("Headers: <unable to stringify>");
+        // Comprehensive request logging
+        console.error(`[${requestId}] === INCOMING REQUEST ===`);
+        console.error(`[${requestId}] Method: ${req.method}`);
+        console.error(`[${requestId}] URL: ${req.originalUrl || req.url}`);
+        console.error(`[${requestId}] IP: ${req.ip || req.hostname || 'unknown'}`);
+        console.error(`[${requestId}] User-Agent: ${req.headers['user-agent'] || 'none'}`);
+        
+        // Log all headers for debugging
+        console.error(`[${requestId}] === HEADERS ===`);
+        Object.entries(req.headers).forEach(([key, value]) => {
+          console.error(`[${requestId}] ${key}: ${value}`);
+        });
+        
+        // Handle case-insensitive session ID headers per MCP spec
+        const sessionId = req.headers["mcp-session-id"] as string || 
+                         req.headers["Mcp-Session-Id"] as string ||
+                         req.headers["MCP-Session-Id"] as string;
+        
+        // Log protocol version header
+        const protocolVersion = req.headers["mcp-protocol-version"] as string ||
+                               req.headers["MCP-Protocol-Version"] as string;
+        
+        // Enhanced session and protocol logging
+        console.error(`[${requestId}] === MCP DETAILS ===`);
+        console.error(`[${requestId}] Session ID: ${sessionId || 'NONE'}`);
+        console.error(`[${requestId}] Protocol Version: ${protocolVersion || 'NONE'}`);
+        console.error(`[${requestId}] Accept: ${req.headers.accept || 'NONE'}`);
+        console.error(`[${requestId}] Content-Type: ${req.headers["content-type"] || 'NONE'}`);
+        console.error(`[${requestId}] Content-Length: ${req.headers["content-length"] || 'NONE'}`);
+        
+        // Don't log request body to avoid consuming the stream before StreamableHTTPServerTransport
+        // The transport needs to read the raw body itself
+        
+        // Validate required MCP headers
+        const missingHeaders = [];
+        if (!req.headers["content-type"]) missingHeaders.push("Content-Type");
+        if (!req.headers.accept) missingHeaders.push("Accept");
+        if (!protocolVersion) missingHeaders.push("MCP-Protocol-Version");
+        
+        if (missingHeaders.length > 0) {
+          console.error(`[${requestId}] ❌ MISSING REQUIRED HEADERS: ${missingHeaders.join(', ')}`);
         }
+        
+        // Validate Accept header format
+        const acceptHeader = req.headers.accept;
+        if (acceptHeader) {
+          const hasJson = acceptHeader.includes('application/json');
+          const hasStream = acceptHeader.includes('text/event-stream');
+          console.error(`[${requestId}] Accept validation: JSON=${hasJson}, Stream=${hasStream}`);
+          
+          if (!hasJson && !hasStream) {
+            console.error(`[${requestId}] ❌ INVALID ACCEPT HEADER: Must include application/json or text/event-stream`);
+          }
+        }
+        
+        console.error(`[${requestId}] === CALLING TRANSPORT ===`);
+        
+        // Override response methods to log the response
+        const originalJson = res.json;
+        const originalSend = res.send;
+        const originalStatus = res.status;
+        
+        res.json = function(body) {
+          console.error(`[${requestId}] === RESPONSE ===`);
+          console.error(`[${requestId}] Status: ${res.statusCode}`);
+          console.error(`[${requestId}] Response Headers:`, res.getHeaders());
+          console.error(`[${requestId}] Response Body: ${JSON.stringify(body).substring(0, 500)}`);
+          return originalJson.call(this, body);
+        };
+        
+        res.send = function(body) {
+          console.error(`[${requestId}] === RESPONSE ===`);
+          console.error(`[${requestId}] Status: ${res.statusCode}`);
+          console.error(`[${requestId}] Response Headers:`, res.getHeaders());
+          console.error(`[${requestId}] Response Body: ${typeof body === 'string' ? body.substring(0, 500) : body}`);
+          return originalSend.call(this, body);
+        };
+        
+        res.status = function(code) {
+          console.error(`[${requestId}] Setting status code: ${code}`);
+          return originalStatus.call(this, code);
+        };
+        
         await transport.handleRequest(req, res);
+        
+        console.error(`[${requestId}] === REQUEST COMPLETED ===`);
+        
       } catch (e) {
-        console.error("[Transport error]", e);
-        if (!res.headersSent) res.status(500).end();
+        console.error(`[${requestId}] ❌ TRANSPORT ERROR:`, e);
+        console.error(`[${requestId}] Error stack:`, e instanceof Error ? e.stack : 'No stack trace');
+        
+        if (!res.headersSent) {
+          console.error(`[${requestId}] Sending 500 error response`);
+          res.status(500).json({
+            jsonrpc: "2.0",
+            id: null,
+            error: {
+              code: -32603,
+              message: "Internal error",
+              data: {
+                error: e instanceof Error ? e.message : String(e),
+                timestamp: new Date().toISOString(),
+                requestId: requestId
+              }
+            }
+          });
+        }
       }
     });
 

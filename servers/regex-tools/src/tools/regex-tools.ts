@@ -12,7 +12,11 @@ export interface RegexToolResult {
 
 export default class RegexTools {
   /**
-   * Count the number of matches for a regex pattern in text
+   * Count the number of matches for a regex pattern in text.
+   * @param {string} text - Text to search.
+   * @param {string} pattern - Regex pattern (source) to apply.
+   * @param {string} [flags='g'] - Regex flags (e.g., i, m, u, g).
+   * @returns {RegexToolResult} Total match count and metadata.
    */
   static matchCount(text: string, pattern: string, flags?: string): RegexToolResult {
     try {
@@ -38,7 +42,11 @@ export default class RegexTools {
   }
 
   /**
-   * Test if text matches a regex pattern
+   * Test if text matches a regex pattern.
+   * @param {string} text - Text to test.
+   * @param {string} pattern - Regex pattern (source) to apply.
+   * @param {string} [flags] - Regex flags (e.g., i, m, u, g).
+   * @returns {RegexToolResult} Whether a match exists and first match details.
    */
   static match(text: string, pattern: string, flags?: string): RegexToolResult {
     try {
@@ -68,7 +76,11 @@ export default class RegexTools {
   }
 
   /**
-   * Extract all matches from text
+   * Extract all matches from text.
+   * @param {string} text - Text to search.
+   * @param {string} pattern - Regex pattern (source) to apply.
+   * @param {string} [flags='g'] - Regex flags; global recommended for all matches.
+   * @returns {RegexToolResult} Array of matches with indices and groups.
    */
   static extract(text: string, pattern: string, flags?: string): RegexToolResult {
     try {
@@ -100,7 +112,12 @@ export default class RegexTools {
   }
 
   /**
-   * Replace matches in text with replacement string
+   * Replace matches in text with a replacement string.
+   * @param {string} text - Input text to modify.
+   * @param {string} pattern - Regex pattern (source) to replace.
+   * @param {string} replacement - Replacement string.
+   * @param {string} [flags='g'] - Regex flags.
+   * @returns {RegexToolResult} Original and new text with change count.
    */
   static replace(
     text: string, 
@@ -140,7 +157,12 @@ export default class RegexTools {
   }
 
   /**
-   * Split text by regex pattern
+   * Split text by regex pattern.
+   * @param {string} text - Text to split.
+   * @param {string} pattern - Regex pattern (source) used as delimiter.
+   * @param {string} [flags] - Regex flags.
+   * @param {number} [limit] - Maximum number of parts.
+   * @returns {RegexToolResult} Parts and count.
    */
   static split(text: string, pattern: string, flags?: string, limit?: number): RegexToolResult {
     try {
@@ -191,7 +213,9 @@ export default class RegexTools {
   }
 
   /**
-   * Extract JSON objects from text using regex
+   * Extract JSON objects from text using regex.
+   * @param {string} text - Text potentially containing JSON objects/arrays.
+   * @returns {RegexToolResult} Lists of valid and invalid JSON snippets.
    */
   static extractJson(text: string): RegexToolResult {
     try {
@@ -240,7 +264,11 @@ export default class RegexTools {
   }
 
   /**
-   * Find and return capture groups from matches
+   * Find and return capture groups from matches.
+   * @param {string} text - Text to search.
+   * @param {string} pattern - Regex pattern (source) with capture groups.
+   * @param {string} [flags='g'] - Regex flags; global recommended.
+   * @returns {RegexToolResult} Capture groups per match, including named groups.
    */
   static findGroups(text: string, pattern: string, flags?: string): RegexToolResult {
     try {
@@ -276,7 +304,10 @@ export default class RegexTools {
   }
 
   /**
-   * Validate if a regex pattern is valid
+   * Validate if a regex pattern is valid.
+   * @param {string} pattern - Regex pattern (source) to validate.
+   * @param {string} [flags] - Regex flags to use during compilation.
+   * @returns {RegexToolResult} Whether pattern compiles and any error if not.
    */
   static validate(pattern: string, flags?: string): RegexToolResult {
     try {
@@ -311,7 +342,11 @@ export default class RegexTools {
   }
 
   /**
-   * Tokenize text using regex pattern as delimiter
+   * Tokenize text using regex pattern as delimiter.
+   * @param {string} text - Text to tokenize.
+   * @param {string} [pattern] - Delimiter pattern; defaults to whitespace and punctuation.
+   * @param {string} [flags='gu'] - Regex flags; defaults to global + unicode.
+   * @returns {RegexToolResult} Tokens and statistics.
    */
   static tokenize(text: string, pattern?: string, flags?: string): RegexToolResult {
     try {
@@ -352,7 +387,15 @@ export default class RegexTools {
   }
 
   /**
-   * Normalize whitespace in text
+   * Normalize whitespace in text.
+   * @param {string} text - Text to normalize.
+   * @param {Object} [options] - Normalization options.
+   * @param {boolean} [options.trimStart=true] - Trim leading whitespace.
+   * @param {boolean} [options.trimEnd=true] - Trim trailing whitespace.
+   * @param {boolean} [options.collapseSpaces=true] - Collapse runs of spaces/tabs into single spaces.
+   * @param {boolean} [options.removeLineBreaks=false] - Replace line breaks with spaces.
+   * @param {boolean} [options.normalizeLineBreaks=true] - Convert CRLF/CR to LF.
+   * @returns {RegexToolResult} Original and normalized text with change list.
    */
   static normalizeWhitespace(text: string, options?: {
     trimStart?: boolean;
@@ -424,7 +467,11 @@ export default class RegexTools {
   }
 
   /**
-   * Redact sensitive information using regex patterns
+   * Redact sensitive information using regex patterns.
+   * @param {string} text - Input text to redact.
+   * @param {{ name: string; pattern: string; replacement?: string }[]} patterns - Named patterns and optional replacements (default [REDACTED]).
+   * @param {string} [flags='gi'] - Regex flags to apply to each pattern.
+   * @returns {RegexToolResult} Redacted text and details per pattern.
    */
   static redact(
     text: string, 
